@@ -13,7 +13,7 @@
 #include <sys/wait.h>
 
 #include "lib/server.hh"
-
+#include "lib/client.hh"
 
 std::vector<std::string> split_string_on_delimiter(std::string s, std::string delimiter)
 {
@@ -105,7 +105,7 @@ int spawn_process(int in, int out, std::string cmd)
 	switch ((fpid = fork()))
 	{
 		case -1:
-			std::cerr << "Error while forking this process with PID: " << fpid << std::endl;
+			std::cerr << "rshell: error while forking this process with PID: " << fpid << std::endl;
 			exit(1);
 		
 		case 0:
@@ -174,19 +174,19 @@ std::optional<std::map<std::string, std::string>> parse_args(int argc, char** ar
 		{
 			if (!args["server_ip"].empty() || !args["server_port"].empty())
 			{
-				std::cerr << "ERROR: port or ip is alleardy specified with another argument." << std::endl;
+				std::cerr << "rshell: port or ip is alleardy specified with another argument." << std::endl;
 				return std::nullopt;
 			}
 
 			if (!args["client_ip"].empty() || !args["client_port"].empty())
 			{
-				std::cerr << "ERROR: cannot be a server and a client at the same time." << std::endl;
+				std::cerr << "rshell: cannot be a server and a client at the same time." << std::endl;
 				return std::nullopt;
 			}
 
 			if (i == argc - 1 || argc < 4)
 			{
-				std::cerr << "ERROR: " << arg << " parameter requires ip and portnumer." << std::endl;
+				std::cerr << "rshell: " << arg << " parameter requires ip and portnumer." << std::endl;
 				return std::nullopt;
 			}
 
@@ -199,19 +199,19 @@ std::optional<std::map<std::string, std::string>> parse_args(int argc, char** ar
 		{
 			if (!args["client_ip"].empty() || !args["client_port"].empty())
 			{
-				std::cerr << "ERROR: port or ip is alleardy specified with another argument." << std::endl;
+				std::cerr << "rshell: port or ip is alleardy specified with another argument." << std::endl;
 				return std::nullopt;
 			}
 
 			if (!args["server_ip"].empty() || !args["server_port"].empty())
 			{
-				std::cerr << "ERROR: cannot be a server and a client at the same time." << std::endl;
+				std::cerr << "rshell: cannot be a server and a client at the same time." << std::endl;
 				return std::nullopt;
 			}
 
 			if (i == argc - 1 || argc < 4)
 			{
-				std::cerr << "ERROR: " << arg << " parameter requires ip and portnumer." << std::endl;
+				std::cerr << "rshell: " << arg << " parameter requires ip and portnumer." << std::endl;
 				return std::nullopt;
 			}
 
@@ -267,15 +267,16 @@ int main(int argc, char **argv)
 
 	if (!args["server_ip"].empty() && !args["server_port"].empty())
 	{
-
+		Server server{args["server_ip"], args["server_port"]};
+		server.init(1);
 	}
 	else if (!args["client_ip"].empty() && !args["client_port"].empty())
 	{
-
+		Client client{args["client_ip"], args["client_port"]};
 	}
 	else
 	{
-		std::cerr << "ERROR: invalid argumet encoutered." << std::endl;
+		std::cerr << "rshell: invalid argumet encoutered." << std::endl;
 	}
 
 	return 0;
