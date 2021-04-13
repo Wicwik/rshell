@@ -12,6 +12,8 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 
+#include "lib/server.hh"
+
 
 std::vector<std::string> split_string_on_delimiter(std::string s, std::string delimiter)
 {
@@ -263,7 +265,18 @@ int main(int argc, char **argv)
 		}
 	}
 
-	//if ()
+	if (!args["server_ip"].empty() && !args["server_port"].empty())
+	{
+
+	}
+	else if (!args["client_ip"].empty() && !args["client_port"].empty())
+	{
+
+	}
+	else
+	{
+		std::cerr << "ERROR: invalid argumet encoutered." << std::endl;
+	}
 
 	return 0;
 }
