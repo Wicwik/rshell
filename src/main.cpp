@@ -4,6 +4,8 @@
 #include <utility>
 #include <algorithm>
 #include <cctype>
+#include <optional>
+#include <map>
 
 #include <unistd.h>
 #include <fcntl.h>
@@ -136,13 +138,12 @@ int pipe_cmds(std::vector<std::string> cmds)
 {
 	int in = fileno(stdin);
 	int out = fileno(stdout);
+	int fd[2];
 
 	std::string last_cmd = cmds.back();
 	if (cmds.size() > 1)
-	{
-		int fd[2];
-		
-		last_cmd.pop_back();
+	{	
+		cmds.pop_back();
 
 		for (const auto &cmd : cmds)
 		{
@@ -159,6 +160,73 @@ int pipe_cmds(std::vector<std::string> cmds)
 	return spawn_process(in, out, last_cmd);
 }
 
+std::optional<std::map<std::string, std::string>> parse_args(int argc, char** argv)
+{
+	std::map<std::string, std::string> args;
+
+	for (int i = 1; i < argc; i++)
+	{
+		std::string arg = argv[i];
+
+		if (arg == "-s" || arg == "--server")
+		{
+			if (!args["server_ip"].empty() || !args["server_port"].empty())
+			{
+				std::cerr << "ERROR: port or ip is alleardy specified with another argument." << std::endl;
+				return std::nullopt;
+			}
+
+			if (!args["client_ip"].empty() || !args["client_port"].empty())
+			{
+				std::cerr << "ERROR: cannot be a server and a client at the same time." << std::endl;
+				return std::nullopt;
+			}
+
+			if (i == argc - 1 || argc < 4)
+			{
+				std::cerr << "ERROR: " << arg << " parameter requires ip and portnumer." << std::endl;
+				return std::nullopt;
+			}
+
+			args["server_ip"] = argv[++i];
+			args["server_port"] = argv[++i];
+			continue;
+		}
+
+		if (arg == "-c" || arg == "--client")
+		{
+			if (!args["client_ip"].empty() || !args["client_port"].empty())
+			{
+				std::cerr << "ERROR: port or ip is alleardy specified with another argument." << std::endl;
+				return std::nullopt;
+			}
+
+			if (!args["server_ip"].empty() || !args["server_port"].empty())
+			{
+				std::cerr << "ERROR: cannot be a server and a client at the same time." << std::endl;
+				return std::nullopt;
+			}
+
+			if (i == argc - 1 || argc < 4)
+			{
+				std::cerr << "ERROR: " << arg << " parameter requires ip and portnumer." << std::endl;
+				return std::nullopt;
+			}
+
+			args["client_ip"] = argv[++i];
+			args["client_port"] = argv[++i];
+			continue;
+		}
+	}
+
+	if (args.empty())
+	{
+		return std::nullopt;
+	}
+
+	return args;
+}
+
 
 int main(int argc, char **argv)
 {
@@ -167,25 +235,35 @@ int main(int argc, char **argv)
 
 	std::cout << "My PID: " << pid << " Parrent PID: " << ppid << std::endl;
 
-	while (1)
+	auto args =  parse_args(argc, argv).value_or(std::map<std::string, std::string>());
+
+	if (args.empty())
 	{
-		std::cout << "#> ";
-
-		std::string line;
-		std::getline(std::cin, line);
-
-		if (line == "exit") exit(0);
-
-		line = remove_comments(line);
-		std::vector<std::string> cmds = split_string_on_delimiter(line, ";");
-
-		for (const auto &cmd : cmds)
+		while (1)
 		{
-			std::string parsed_cmd = cmd;
+			std::cout << "#> ";
 
-			pipe_cmds(split_string_on_delimiter(parsed_cmd, "|"));
+			std::string line;
+			std::getline(std::cin, line);
+
+			if (line == "exit") 
+			{
+				exit(0);
+			}
+
+			line = remove_comments(line);
+			std::vector<std::string> cmds = split_string_on_delimiter(line, ";");
+
+			for (const auto &cmd : cmds)
+			{
+				std::string parsed_cmd = cmd;
+
+				pipe_cmds(split_string_on_delimiter(parsed_cmd, "|"));
+			}
 		}
 	}
+
+	//if ()
 
 	return 0;
 }
