@@ -6,6 +6,8 @@
 #include <cctype>
 #include <optional>
 #include <map>
+#include <regex>
+#include <sstream>
 
 #include <unistd.h>
 #include <fcntl.h>
@@ -14,6 +16,36 @@
 
 #include "lib/server.hh"
 #include "lib/client.hh"
+
+bool is_int(std::string& str)
+{
+	try
+	{
+		size_t pos = 0;
+		std::stoi(str, std::addressof(pos));
+
+		while (std::isspace(str.back())) 
+		{
+			str.pop_back();
+		}
+		
+		return pos == str.size();
+	}
+
+	catch (const std::exception&) 
+	{ 
+		return false; 
+	}
+}
+
+int str_to_int(std::string str)
+{
+	std::stringstream ss(str);
+	int out = 0;
+	ss >> out;
+
+	return out;
+}
 
 std::vector<std::string> split_string_on_delimiter(std::string s, std::string delimiter)
 {
@@ -172,9 +204,9 @@ std::optional<std::map<std::string, std::string>> parse_args(int argc, char** ar
 
 		if (arg == "-s" || arg == "--server")
 		{
-			if (!args["server_ip"].empty() || !args["server_port"].empty())
+			if (!args["server_port"].empty())
 			{
-				std::cerr << "rshell: port or ip is alleardy specified with another argument." << std::endl;
+				std::cerr << "rshell: server port is alleardy specified with another argument." << std::endl;
 				return std::nullopt;
 			}
 
@@ -184,14 +216,20 @@ std::optional<std::map<std::string, std::string>> parse_args(int argc, char** ar
 				return std::nullopt;
 			}
 
-			if (i == argc - 1 || argc < 4)
+			if (i == argc - 1 || argc < 3)
 			{
-				std::cerr << "rshell: " << arg << " parameter requires ip and portnumer." << std::endl;
+				std::cerr << "rshell: " << arg << " parameter requires port number." << std::endl;
 				return std::nullopt;
 			}
 
-			args["server_ip"] = argv[++i];
 			args["server_port"] = argv[++i];
+
+			if (!is_int(args["server_port"]))
+			{
+				std::cerr << "rshell: server port must be a valid number." << std::endl;
+				return std::nullopt;
+			}
+
 			continue;
 		}
 
@@ -199,11 +237,11 @@ std::optional<std::map<std::string, std::string>> parse_args(int argc, char** ar
 		{
 			if (!args["client_ip"].empty() || !args["client_port"].empty())
 			{
-				std::cerr << "rshell: port or ip is alleardy specified with another argument." << std::endl;
+				std::cerr << "rshell: client port or ip is alleardy specified with another argument." << std::endl;
 				return std::nullopt;
 			}
 
-			if (!args["server_ip"].empty() || !args["server_port"].empty())
+			if (!args["server_ip"].empty())
 			{
 				std::cerr << "rshell: cannot be a server and a client at the same time." << std::endl;
 				return std::nullopt;
@@ -211,12 +249,19 @@ std::optional<std::map<std::string, std::string>> parse_args(int argc, char** ar
 
 			if (i == argc - 1 || argc < 4)
 			{
-				std::cerr << "rshell: " << arg << " parameter requires ip and portnumer." << std::endl;
+				std::cerr << "rshell: " << arg << " parameter requires ip and port number." << std::endl;
 				return std::nullopt;
 			}
 
 			args["client_ip"] = argv[++i];
 			args["client_port"] = argv[++i];
+
+			if (!is_int(args["client_port"]))
+			{
+				std::cerr << "rshell: client port must be a valid number." << std::endl;
+				return std::nullopt;
+			}
+
 			continue;
 		}
 	}
@@ -265,14 +310,15 @@ int main(int argc, char **argv)
 		}
 	}
 
-	if (!args["server_ip"].empty() && !args["server_port"].empty())
+	if (!args["server_port"].empty())
 	{
-		Server server{args["server_ip"], args["server_port"]};
+		Server server{str_to_int(args["server_port"])};
 		server.init(1);
 	}
 	else if (!args["client_ip"].empty() && !args["client_port"].empty())
 	{
-		Client client{args["client_ip"], args["client_port"]};
+		Client client{args["client_ip"], str_to_int(args["client_port"])};
+		client.init();
 	}
 	else
 	{
