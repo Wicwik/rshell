@@ -52,21 +52,20 @@ public:
 	    }
 
 	    std::cout << "rshell server: got connection from IP address " << get_ip((struct sockaddr_in *)&m_address) << "." << std::endl;
-
-	    char buffer[30];
-	    while(true){
-	    	int bytesread = read(m_client_socket, buffer, sizeof(buffer));
-	    	std::string buffer_str{buffer};
-
-	    	if (bytesread > 0)
-	    	{
-	    		std::cout << buffer_str << std::endl;
-	    	}
-	    	
-	    }
 	    
 	}
 
+	std::pair<std::string, int> read_cmd()
+	{
+		char buffer[1024];
+		int bytesread = read(m_client_socket, buffer, sizeof(buffer));
+	    return std::pair<std::string, int>(std::string(buffer), bytesread);
+	}
+
+	void send_response(std::string response)
+	{
+		
+	}
 
 
 	std::string get_ip(struct sockaddr_in* ip_addr_in)

@@ -168,10 +168,8 @@ int spawn_process(int in, int out, std::string cmd)
 	return status;
 }
 
-int pipe_cmds(std::vector<std::string> cmds)
+int pipe_cmds(std::vector<std::string> cmds, int in = fileno(stdin), int out = fileno(stdout))
 {
-	int in = fileno(stdin);
-	int out = fileno(stdout);
 	int fd[2];
 
 	std::string last_cmd = cmds.back();
@@ -274,6 +272,54 @@ std::optional<std::map<std::string, std::string>> parse_args(int argc, char** ar
 	return args;
 }
 
+void normal_mode()
+{
+	while (true)
+	{
+		std::cout << "#> "; // add hostname
+
+		std::string line;
+		std::getline(std::cin, line);
+
+		if (line == "exit") 
+		{
+			exit(0);
+		}
+
+		line = remove_comments(line);
+		std::vector<std::string> cmds = split_string_on_delimiter(line, ";");
+
+		for (const auto &cmd : cmds)
+		{
+			std::string parsed_cmd = cmd;
+
+			pipe_cmds(split_string_on_delimiter(parsed_cmd, "|"));
+		}
+	}
+}
+
+void remote_mode(Client client)
+{
+	while (true)
+		{
+			std::cout << "#> "; //add server hostname
+
+			std::string line;
+			std::getline(std::cin, line);
+
+			if (line == "quit") 
+			{
+				client.disconnect();
+				std::cout << "rshell: Disconnected from remote host, entering normal interactive mode." << std::endl;
+				normal_mode();
+			}
+
+			line = remove_comments(line);
+			client.send_cmd(line);
+			std::string response = client.read_response();
+		}
+}
+
 
 int main(int argc, char **argv)
 {
@@ -286,20 +332,30 @@ int main(int argc, char **argv)
 
 	if (args.empty())
 	{
-		while (1)
-		{
-			std::cout << "#> ";
+		normal_mode();
+	}
 
-			std::string line;
-			std::getline(std::cin, line);
+	if (!args["server_port"].empty())
+	{
+		Server server{str_to_int(args["server_port"])};
+		server.init(1);
 
-			if (line == "exit") 
-			{
-				exit(0);
-			}
+	    while(true)
+	    {
+	    	std::pair<std::string, int> read_pair = server.read_cmd();
+	    	std::string buffer_str = read_pair.first;
+	    	int bytesread = read_pair.second;
 
-			line = remove_comments(line);
-			std::vector<std::string> cmds = split_string_on_delimiter(line, ";");
+	    	if (bytesread > 0)
+	    	{
+	    		std::cout << buffer_str << std::endl;
+	    		if (buffer_str == "ByeBye")
+	    		{
+	    			break;
+	    		}
+	    	}
+
+	    	std::vector<std::string> cmds = split_string_on_delimiter(buffer_str, ";");
 
 			for (const auto &cmd : cmds)
 			{
@@ -307,18 +363,14 @@ int main(int argc, char **argv)
 
 				pipe_cmds(split_string_on_delimiter(parsed_cmd, "|"));
 			}
-		}
-	}
-
-	if (!args["server_port"].empty())
-	{
-		Server server{str_to_int(args["server_port"])};
-		server.init(1);
+	    }
 	}
 	else if (!args["client_ip"].empty() && !args["client_port"].empty())
 	{
 		Client client{args["client_ip"], str_to_int(args["client_port"])};
 		client.init();
+		remote_mode(client);
+		
 	}
 	else
 	{

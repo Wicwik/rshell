@@ -37,6 +37,31 @@ public:
     	}
 	}
 
+	void send_cmd(std::string line)
+	{
+		send(m_server_socket , line.c_str() , line.size()+1 , 0);
+	}
+
+	void disconnect()
+	{
+		std::string message = "ByeBye";
+		send(m_server_socket , message.c_str() , message.size()+1 , 0);
+	}
+
+	std::string read_response()
+	{
+		char response[4096];
+		while (true)
+		{
+			int bytesread = read(m_server_socket, response, sizeof(response));
+
+			if (bytesread > 0)
+			{
+				return std::string(response);
+			} 
+		}
+	}
+
 private:
 	std::string m_ip;
 	int m_port;
