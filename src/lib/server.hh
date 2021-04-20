@@ -62,11 +62,11 @@ public:
 	    return std::pair<std::string, int>(std::string(buffer), bytesread);
 	}
 
-	void send_response(std::string response)
+	void send_end()
 	{
-		
+		char message[1] = {0};	
+		send(m_client_socket , message , 1 , 0);
 	}
-
 
 	std::string get_ip(struct sockaddr_in* ip_addr_in)
 	{
@@ -75,6 +75,11 @@ public:
 		inet_ntop(AF_INET, &ip_addr, str, INET_ADDRSTRLEN);
 
 		return std::string(str);
+	}
+
+	int get_client_socket()
+	{
+		return m_client_socket;
 	}
 
 private:

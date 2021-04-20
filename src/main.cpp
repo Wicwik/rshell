@@ -17,6 +17,9 @@
 #include "lib/server.hh"
 #include "lib/client.hh"
 
+bool is_last = false;
+bool is_last_redout = false;
+
 bool is_int(std::string& str)
 {
 	try
@@ -96,6 +99,11 @@ int spawn_process(int in, int out, std::string cmd)
 
 	if (redout)
 	{
+		if (is_last)
+		{
+			is_last_redout = true;
+		}
+
 		std::pair<std::string, std::string> cmd_file_pair = separate(cmd, ">");
 		cmd = cmd_file_pair.first;
 
@@ -172,6 +180,7 @@ int pipe_cmds(std::vector<std::string> cmds, int in = fileno(stdin), int out = f
 {
 	int fd[2];
 
+	is_last = false;
 	std::string last_cmd = cmds.back();
 	if (cmds.size() > 1)
 	{	
@@ -189,6 +198,7 @@ int pipe_cmds(std::vector<std::string> cmds, int in = fileno(stdin), int out = f
 		}
 	}
 
+	is_last = true;
 	return spawn_process(in, out, last_cmd);
 }
 
@@ -301,23 +311,34 @@ void normal_mode()
 void remote_mode(Client client)
 {
 	while (true)
+	{
+		std::cout << "#> "; //add server hostname
+
+		std::string line;
+		std::getline(std::cin, line);
+
+		if (line == "")
 		{
-			std::cout << "#> "; //add server hostname
-
-			std::string line;
-			std::getline(std::cin, line);
-
-			if (line == "quit") 
-			{
-				client.disconnect();
-				std::cout << "rshell: Disconnected from remote host, entering normal interactive mode." << std::endl;
-				normal_mode();
-			}
-
-			line = remove_comments(line);
-			client.send_cmd(line);
-			std::string response = client.read_response();
+			continue;
 		}
+
+		if (line == "quit") 
+		{
+			client.disconnect();
+			std::cout << "rshell: Disconnected from remote host, entering normal interactive mode." << std::endl;
+			normal_mode();
+		}
+
+		line = remove_comments(line);
+		client.send_cmd(line);
+		
+		std::string response = client.read_response();
+
+		if (response != "")
+		{
+			std::cout << response;	
+		}
+	}
 }
 
 
@@ -348,20 +369,25 @@ int main(int argc, char **argv)
 
 	    	if (bytesread > 0)
 	    	{
-	    		std::cout << buffer_str << std::endl;
 	    		if (buffer_str == "ByeBye")
 	    		{
 	    			break;
 	    		}
-	    	}
 
-	    	std::vector<std::string> cmds = split_string_on_delimiter(buffer_str, ";");
+		    	std::vector<std::string> cmds = split_string_on_delimiter(buffer_str, ";");
 
-			for (const auto &cmd : cmds)
-			{
-				std::string parsed_cmd = cmd;
+				for (const auto &cmd : cmds)
+				{
+					std::string parsed_cmd = cmd;
 
-				pipe_cmds(split_string_on_delimiter(parsed_cmd, "|"));
+					is_last_redout = false;
+					pipe_cmds(split_string_on_delimiter(parsed_cmd, "|"), fileno(stdin), server.get_client_socket());
+					
+					if (is_last_redout)
+					{
+						server.send_end();
+					}
+				}
 			}
 	    }
 	}

@@ -50,13 +50,19 @@ public:
 
 	std::string read_response()
 	{
-		char response[4096];
+		char response[5000000];
 		while (true)
 		{
-			int bytesread = read(m_server_socket, response, sizeof(response));
+			int bytesread = read(m_server_socket, response, sizeof(response)-1);
+
+			if (bytesread == 1 && response[0] == 0)
+			{
+				return std::string("");
+			}
 
 			if (bytesread > 0)
 			{
+				response[bytesread] = '\0';
 				return std::string(response);
 			} 
 		}
