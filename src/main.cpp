@@ -13,12 +13,52 @@
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <time.h>
+#include <pwd.h>
 
 #include "lib/server.hh"
 #include "lib/client.hh"
 
-bool is_last = false;
-bool is_last_redout = false;
+std::string get_time()
+{
+	time_t rt;
+	struct tm * t;
+
+	time(&rt);
+	t = localtime(&rt);
+
+	return std::string(std::to_string(t->tm_hour) + ":" + std::to_string(t->tm_min));
+}
+
+std::string get_hostname()
+{
+	char hostname[1024];
+	hostname[1023] = '\0';
+	gethostname(hostname, 1023);
+
+	return std::string(hostname);
+}
+
+std::string get_username()
+{
+	struct passwd *pw;
+	uid_t uid;
+
+	uid = geteuid();
+	pw = getpwuid(uid);
+
+	if (pw)
+	{
+		return std::string(pw->pw_name);
+	}
+
+	return "";
+}
+
+void print_prompt()
+{
+	std::cout << get_time() << " " << get_username() << "@" << get_hostname() << " #> ";
+}
 
 bool is_int(std::string& str)
 {
@@ -99,11 +139,6 @@ int spawn_process(int in, int out, std::string cmd)
 
 	if (redout)
 	{
-		if (is_last)
-		{
-			is_last_redout = true;
-		}
-
 		std::pair<std::string, std::string> cmd_file_pair = separate(cmd, ">");
 		cmd = cmd_file_pair.first;
 
@@ -180,7 +215,6 @@ int pipe_cmds(std::vector<std::string> cmds, int in = fileno(stdin), int out = f
 {
 	int fd[2];
 
-	is_last = false;
 	std::string last_cmd = cmds.back();
 	if (cmds.size() > 1)
 	{	
@@ -198,7 +232,6 @@ int pipe_cmds(std::vector<std::string> cmds, int in = fileno(stdin), int out = f
 		}
 	}
 
-	is_last = true;
 	return spawn_process(in, out, last_cmd);
 }
 
@@ -286,7 +319,7 @@ void normal_mode()
 {
 	while (true)
 	{
-		std::cout << "#> "; // add hostname
+		print_prompt();
 
 		std::string line;
 		std::getline(std::cin, line);
@@ -310,9 +343,12 @@ void normal_mode()
 
 void remote_mode(Client client)
 {
+	std::string prompt = client.read_server_prompt();
+
 	while (true)
 	{
-		std::cout << "#> "; //add server hostname
+		
+		std::cout << prompt;
 
 		std::string line;
 		std::getline(std::cin, line);
@@ -360,6 +396,7 @@ int main(int argc, char **argv)
 	{
 		Server server{str_to_int(args["server_port"])};
 		server.init(1);
+		server.wait_for_connection();
 
 	    while(true)
 	    {
@@ -374,20 +411,22 @@ int main(int argc, char **argv)
 	    			break;
 	    		}
 
+	    		if (buffer_str == "prompt")
+	    		{
+	    			server.send_prompt(get_time() + " " + get_username() + "@" + get_hostname() + " #> ");
+	    			continue;
+	    		}
+
 		    	std::vector<std::string> cmds = split_string_on_delimiter(buffer_str, ";");
 
 				for (const auto &cmd : cmds)
 				{
 					std::string parsed_cmd = cmd;
 
-					is_last_redout = false;
 					pipe_cmds(split_string_on_delimiter(parsed_cmd, "|"), fileno(stdin), server.get_client_socket());
-					
-					if (is_last_redout)
-					{
-						server.send_end();
-					}
 				}
+
+				server.send_end();
 			}
 	    }
 	}
@@ -396,7 +435,6 @@ int main(int argc, char **argv)
 		Client client{args["client_ip"], str_to_int(args["client_port"])};
 		client.init();
 		remote_mode(client);
-		
 	}
 	else
 	{

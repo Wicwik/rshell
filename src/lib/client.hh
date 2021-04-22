@@ -51,14 +51,36 @@ public:
 	std::string read_response()
 	{
 		char response[5000000];
+		std::string str_response;
+
 		while (true)
 		{
 			int bytesread = read(m_server_socket, response, sizeof(response)-1);
 
 			if (bytesread == 1 && response[0] == 0)
 			{
-				return std::string("");
+				return str_response;
 			}
+
+			if (bytesread > 0)
+			{
+				response[bytesread] = '\0';
+				str_response += std::string(response);
+			} 
+		}
+	}
+
+	std::string read_server_prompt()
+	{
+		std::string message = "prompt";
+		send(m_server_socket , message.c_str() , message.size()+1 , 0);
+
+		char response[5000000];
+		std::string str_response;
+
+		while (true)
+		{
+			int bytesread = read(m_server_socket, response, sizeof(response)-1);
 
 			if (bytesread > 0)
 			{

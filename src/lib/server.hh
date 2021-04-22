@@ -37,22 +37,39 @@ public:
 	    }
 
 	    std::cout << "rshell server: entering listening state." << std::endl;
-	    if (listen(m_server_fd, 3) < 0)
+	    if (listen(m_server_fd, 5) < 0)
 		{
 			std::cerr << "rshell server: error while setting server to listening state." << std::endl;
 			exit(1);
 		}
-
-		std::cout << "rshell server: waiting for connection." << std::endl;
-		int addrlen = sizeof(m_address);
-		if ((m_client_socket = accept(m_server_fd, (struct sockaddr *)&m_address, (socklen_t*)&addrlen)) < 0)
-	    {
-	    	std::cerr << "rshell server: error while accepting client's connection." << std::endl;
-	        exit(1);
-	    }
-
-	    std::cout << "rshell server: got connection from IP address " << get_ip((struct sockaddr_in *)&m_address) << "." << std::endl;
 	    
+	}
+
+	void wait_for_connection()
+	{
+		while (true)
+		{
+			std::cout << "rshell server: waiting for connection." << std::endl;
+			int addrlen = sizeof(m_address);
+			if ((m_client_socket = accept(m_server_fd, (struct sockaddr *)&m_address, (socklen_t*)&addrlen)) < 0)
+		    {
+		    	std::cerr << "rshell server: error while accepting client's connection." << std::endl;
+		        exit(1);
+		    }
+
+		    std::cout << "rshell server: got connection from IP address " << get_ip((struct sockaddr_in *)&m_address) << "." << std::endl;
+
+		    int pid;
+		    if ((pid=fork()) == 0)
+		    {
+		    	close(m_server_fd);
+		    	return;
+		    }
+		    std::cout << "rshell server: forked handler with PID: " << pid << "." << std::endl;
+
+		    close(m_client_socket);
+		}
+		
 	}
 
 	std::pair<std::string, int> read_cmd()
@@ -80,6 +97,11 @@ public:
 	int get_client_socket()
 	{
 		return m_client_socket;
+	}
+
+	void send_prompt(std::string prompt)
+	{
+		send(m_client_socket , prompt.c_str(), prompt.size()+1 , 0);
 	}
 
 private:
