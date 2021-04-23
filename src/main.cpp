@@ -19,6 +19,18 @@
 #include "lib/server.hh"
 #include "lib/client.hh"
 
+void print_help()
+{
+	std::string help = "rshell - simple shell program, by Robert Belanec\n";
+
+	help+= "Usage: rshell [-c address port] [-s port] [-h]\n\n";
+	help += "-c, --client 					connects to server as a client\n";
+	help += "-s, --server 					creates rshell server on specified port\n";
+	help += "-h, --help 					print this message\n";
+
+	std::cout << help;
+}
+
 std::string get_time()
 {
 	time_t rt;
@@ -95,10 +107,35 @@ std::vector<std::string> split_string_on_delimiter(std::string s, std::string de
 	std::vector<std::string> split_strings;
 	size_t pos = 0;
 
-	while ((pos = s.find(delimiter)) != std::string::npos)
+	if (delimiter == " ")
 	{
-		split_strings.push_back(s.substr(0, pos));
-		s.erase(0, pos + delimiter.length());
+		while ((pos = s.find(delimiter)) != std::string::npos)
+		{
+			if (pos != 0 && s[pos-1] == '\\')
+			{
+				s.erase(std::find(s.begin() + static_cast<int>(pos-1), s.begin() + static_cast<int>(pos-1), '\\'));
+
+				continue;
+			}
+
+			split_strings.push_back(s.substr(0, pos));
+			s.erase(0, pos + delimiter.length());
+		}
+	}
+	else
+	{
+		while ((pos = s.find(delimiter, pos)) != std::string::npos)
+		{
+			if (pos != 0 && s[pos-1] == '\\')
+			{
+				s.erase(std::find(s.begin() + static_cast<int>(pos-1), s.begin() + static_cast<int>(pos-1), '\\'));
+
+				continue;
+			}
+
+			split_strings.push_back(s.substr(0, pos));
+			s.erase(0, pos + delimiter.length());
+		}
 	}
 
 	split_strings.push_back(s);
@@ -109,9 +146,23 @@ std::vector<std::string> split_string_on_delimiter(std::string s, std::string de
 std::string remove_comments(std::string s)
 {
 	size_t pos = 0;
-	if ((pos = s.find("#")) == std::string::npos) return s;
 
-	return s.substr(0, pos);
+	while(true)
+	{
+		if ((pos = s.find("#", pos)) == std::string::npos) return s;
+
+		if (s[pos-1] == '\\')
+		{
+			s.erase(std::find(s.begin() + static_cast<int>(pos-1), s.begin() + static_cast<int>(pos-1), '\\'));
+			pos++;
+
+			continue;
+		}
+		else
+		{
+			return s.substr(0, pos);
+		}
+	}
 }
 
 bool is_redirect_output(std::string s)
@@ -186,7 +237,11 @@ int spawn_process(int in, int out, std::string cmd)
 		case 0:
 			if (in != 0)
 			{
-				if (-1 == dup2(in, fileno(stdin))) std::cerr << "rshell: error while redirecting input" << std::endl;
+				if (-1 == dup2(in, fileno(stdin)))
+				{ 
+					std::cerr << "rshell: error while redirecting input" << std::endl;
+					exit(1);
+				}
 
 				fflush(stdin);
 				close(in);
@@ -194,13 +249,21 @@ int spawn_process(int in, int out, std::string cmd)
 
 			if (out != 1)
 			{
-				if (-1 == dup2(out, fileno(stdout))) std::cerr << "rshell: error while redirecting output" << std::endl;
+				if (-1 == dup2(out, fileno(stdout))) 
+				{
+					std::cerr << "rshell: error while redirecting output" << std::endl;
+					exit(1);
+				}
 
 				fflush(stdout);
 				close(out);
 			}
 
-			if (-1 == execvp(sargv[0], sargv)) std::cerr << "rshell: " << cmd << ": command not found" << std::endl;
+			if (-1 == execvp(sargv[0], sargv)) 
+			{
+				std::cerr << "rshell: " << cmd << ": command not found" << std::endl;
+				exit(1);
+			}
 			break;
 
 		default:
@@ -214,6 +277,13 @@ int spawn_process(int in, int out, std::string cmd)
 int pipe_cmds(std::vector<std::string> cmds, int in = fileno(stdin), int out = fileno(stdout))
 {
 	int fd[2];
+
+	if (out != fileno(stdout))
+	{
+		if (-1 == dup2(out, fileno(stderr))) std::cerr << "rshell: error while redirecting error" << std::endl;
+
+		fflush(stderr);	
+	}
 
 	std::string last_cmd = cmds.back();
 	if (cmds.size() > 1)
@@ -305,6 +375,13 @@ std::optional<std::map<std::string, std::string>> parse_args(int argc, char** ar
 
 			continue;
 		}
+
+		if (arg == "-h" || arg == "--help")
+		{
+
+			print_help();
+			exit(0);
+		}
 	}
 
 	if (args.empty())
@@ -324,9 +401,20 @@ void normal_mode()
 		std::string line;
 		std::getline(std::cin, line);
 
-		if (line == "exit") 
+		if (line == "quit")
 		{
 			exit(0);
+		}
+
+		if (line == "halt") 
+		{
+			exit(0);
+		}
+
+		if (line == "help")
+		{
+			print_help();
+			continue;
 		}
 
 		line = remove_comments(line);
@@ -365,6 +453,17 @@ void remote_mode(Client client)
 			normal_mode();
 		}
 
+		if (line == "halt") 
+		{
+			exit(0);
+		}
+
+		if (line == "help")
+		{
+			print_help();
+			continue;
+		}
+
 		line = remove_comments(line);
 		client.send_cmd(line);
 		
@@ -387,7 +486,7 @@ int main(int argc, char **argv)
 
 	auto args =  parse_args(argc, argv).value_or(std::map<std::string, std::string>());
 
-	if (args.empty())
+	if (args.empty() && argc == 1)
 	{
 		normal_mode();
 	}
