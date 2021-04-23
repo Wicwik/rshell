@@ -15,18 +15,33 @@
 #include <sys/wait.h>
 #include <time.h>
 #include <pwd.h>
+#include <signal.h>
 
 #include "lib/server.hh"
 #include "lib/client.hh"
+
+
+void int_handler_server(int sig)
+{
+	std::cout << "rshell: server: recieved SIGINT(" << sig << ") - shutting down" << std::endl;
+	exit(0);
+}
+
+void int_handler_client(int sig)
+{
+	std::cout << "rshell: recieved SIGINT(" << sig << ") - shutting down" << std::endl;
+	exit(0);
+}
 
 void print_help()
 {
 	std::string help = "rshell - simple shell program, by Robert Belanec\n";
 
-	help+= "Usage: rshell [-c address port] [-s port] [-h]\n\n";
+	help+= "Usage: rshell [-c address port] [-s port] [-h|a]\n\n";
 	help += "-c, --client 					connects to server as a client\n";
 	help += "-s, --server 					creates rshell server on specified port\n";
 	help += "-h, --help 					print this message\n";
+	help += "-a, --abort                    abort program\n";
 
 	std::cout << help;
 }
@@ -382,6 +397,13 @@ std::optional<std::map<std::string, std::string>> parse_args(int argc, char** ar
 			print_help();
 			exit(0);
 		}
+
+		if (arg == "-a" || arg == "--abort")
+		{
+
+			print_help();
+			exit(0);
+		}
 	}
 
 	if (args.empty())
@@ -493,6 +515,7 @@ int main(int argc, char **argv)
 
 	if (!args["server_port"].empty())
 	{
+		signal(SIGINT, int_handler_server);
 		Server server{str_to_int(args["server_port"])};
 		server.init(1);
 		server.wait_for_connection();
@@ -531,6 +554,7 @@ int main(int argc, char **argv)
 	}
 	else if (!args["client_ip"].empty() && !args["client_port"].empty())
 	{
+		signal(SIGINT, int_handler_client);
 		Client client{args["client_ip"], str_to_int(args["client_port"])};
 		client.init();
 		remote_mode(client);

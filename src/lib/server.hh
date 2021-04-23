@@ -20,10 +20,9 @@ public:
 		    exit(1);
 		}
 
-		if (setsockopt(m_server_fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt)))
+		if (setsockopt(m_server_fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)))
 	    {
 	        std::cerr << "rshell server: error setting socket options." << std::endl;
-	        exit(1);
 	    }
 
 		m_address.sin_family = AF_INET;
