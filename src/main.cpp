@@ -60,6 +60,18 @@ void int_handler_client(int sig)
 	exit(0);
 }
 
+void print_internal_help()
+{
+	std::string help = "These shell commands are defined internally.  Type 'help' to see this list.\n\n";
+
+	help+= "cd  			change directory\n";
+	help+= "halt 			exit rshell\n";
+	help+= "help 			print this message\n";
+	help+= "quit 			disconnect from server (in normal mode exit rshell)\n";
+
+	std::cout << help;
+}
+
 // function to print help
 void print_help()
 {
@@ -569,7 +581,7 @@ void normal_mode()
 
 		if (line == "help")
 		{
-			print_help();
+			print_internal_help();
 			continue;
 		}
 
@@ -616,7 +628,7 @@ void remote_mode(Client client)
 
 		if (line == "help")
 		{
-			print_help();
+			print_internal_help();
 			continue;
 		}
 
