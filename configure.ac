@@ -1,4 +1,4 @@
-AC_INIT([rshell], [0.1], [belanecrobert22@gmail.com])
+AC_INIT([rshell], [0.2], [belanecrobert22@gmail.com])
 AM_INIT_AUTOMAKE([gnu subdir-objects])
 
 AC_PROG_CXX
