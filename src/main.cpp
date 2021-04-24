@@ -1,3 +1,8 @@
+/*	
+ *	Simple shell program, by Robert Belanec
+ *	belanecrobert22@gmail.com
+ */
+
 #include <iostream>
 #include <string>
 #include <vector>
