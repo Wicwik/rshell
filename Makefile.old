@@ -1,0 +1,24 @@
+CC = g++
+
+CFLAGS = -pedantic -std=c++17 -pthread -Wall -Wextra -Wformat=2 -Wlogical-op -Wmissing-include-dirs -Wredundant-decls -Wsign-conversion -Wstrict-overflow=2 -Wundef -Wnull-dereference -Wuninitialized -Walloca -Wcast-qual
+
+TARGET = main
+
+all: $(TARGET)
+
+$(TARGET): src/$(TARGET).cpp
+	$(CC) $(CFLAGS) -o rshell src/$(TARGET).cpp
+
+clean:
+	$(RM) rshell
+
+PREFIX = /usr/local
+
+.PHONY: install
+install: rshell
+	mkdir -p $(DESTDIR)$(PREFIX)/bin
+	cp $< $(DESTDIR)$(PREFIX)/bin/rshell
+
+.PHONY: uninstall
+uninstall:
+	rm -f $(DESTDIR)$(PREFIX)/bin/rshell
