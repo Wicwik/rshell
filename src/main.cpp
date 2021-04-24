@@ -41,7 +41,7 @@ void print_help()
 	help += "-c, --client 					connects to server as a client\n";
 	help += "-s, --server 					creates rshell server on specified port\n";
 	help += "-h, --help 					print this message\n";
-	help += "-a, --abort                    abort program\n";
+	help += "-a, --abort					abort program\n";
 
 	std::cout << help;
 }
