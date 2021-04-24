@@ -26,6 +26,24 @@
 #include "lib/server.hh"
 #include "lib/client.hh"
 
+
+int cd(char **args)
+{
+	if (args[1] == 0)
+	{
+		std::cerr << "rhsell: expected argument to \'cd\'" << std::endl;
+	}
+	else
+	{
+		if (chdir(args[1]) != 0)
+		{
+			perror("rshell");
+		}
+	}
+
+	return 1;
+}
+
 // handler function for server interrupt signal
 void int_handler_server(int sig)
 {
@@ -51,7 +69,7 @@ void print_help()
 	help += "-c, --client 					connects to server as a client\n";
 	help += "-s, --server 					creates rshell server on specified port\n";
 	help += "-h, --help 					print this message\n";
-	help += "-a, --abort					abort program\n";
+	help += "--halt							abort program\n";
 
 	std::cout << help;
 }
@@ -347,6 +365,12 @@ int spawn_process(int in, int out, std::string cmd)
 		sargv = &cstrings[0]; // variable to be passed to execvp
 	}
 
+	if (std::string(cstrings[0]) == "cd")
+	{
+		cd(sargv);
+		return 0;
+	}
+
 	pid_t fpid;
 	switch ((fpid = fork())) // fork new process
 	{
@@ -508,7 +532,7 @@ std::optional<std::map<std::string, std::string>> parse_args(int argc, char** ar
 		}
 
 		// abort
-		if (arg == "-a" || arg == "--abort")
+		if (arg == "--halt")
 		{
 			exit(0);
 		}
