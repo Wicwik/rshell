@@ -213,7 +213,7 @@ CXX = g++
 CXXDEPMODE = depmode=gcc3
 CXXFLAGS = -g -O2
 CYGPATH_W = echo
-DEFS = -DPACKAGE_NAME=\"rshell\" -DPACKAGE_TARNAME=\"rshell\" -DPACKAGE_VERSION=\"0.2\" -DPACKAGE_STRING=\"rshell\ 0.2\" -DPACKAGE_BUGREPORT=\"belanecrobert22@gmail.com\" -DPACKAGE_URL=\"\" -DPACKAGE=\"rshell\" -DVERSION=\"0.2\"
+DEFS = -DPACKAGE_NAME=\"rshell\" -DPACKAGE_TARNAME=\"rshell\" -DPACKAGE_VERSION=\"0.3\" -DPACKAGE_STRING=\"rshell\ 0.3\" -DPACKAGE_BUGREPORT=\"belanecrobert22@gmail.com\" -DPACKAGE_URL=\"\" -DPACKAGE=\"rshell\" -DVERSION=\"0.3\"
 DEPDIR = .deps
 ECHO_C = 
 ECHO_N = -n
@@ -234,15 +234,15 @@ OBJEXT = o
 PACKAGE = rshell
 PACKAGE_BUGREPORT = belanecrobert22@gmail.com
 PACKAGE_NAME = rshell
-PACKAGE_STRING = rshell 0.2
+PACKAGE_STRING = rshell 0.3
 PACKAGE_TARNAME = rshell
 PACKAGE_URL = 
-PACKAGE_VERSION = 0.2
+PACKAGE_VERSION = 0.3
 PATH_SEPARATOR = :
 SET_MAKE = 
 SHELL = /bin/sh
 STRIP = 
-VERSION = 0.2
+VERSION = 0.3
 abs_builddir = /home/rbelanec/Documents/myshell
 abs_srcdir = /home/rbelanec/Documents/myshell
 abs_top_builddir = /home/rbelanec/Documents/myshell
